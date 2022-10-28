@@ -60,8 +60,28 @@ A reminder of the definition of *tidy* data:
 ### 2.1 (2.5 points)
 
 Based on the definition above, can you identify if your data is tidy or untidy? Go through all your columns, or if you have \>8 variables, just pick 8, and explain whether the data is untidy or tidy.
+```{r}
+head(cancer_sample)
+```
 
 <!--------------------------- Start your work below --------------------------->
+From the table, we can find : it contains more than 8 varibles
+And the 8 varibles I would like to choose are:
+ID, diagnosis
+area_mean, area_worst,
+smoothness_mean, smoothness_worst,
+compactness_mean, compactness_worst
+
+cancer_ms2 <- filter(cancer_sample, col = c("ID", "diagnosis", "area_mean", "area_worst", "smoothness_mean", "smoothness_worst", "compactness_mean", "compactness_worst" ))
+```{r}
+cancer_ms2 <- select(cancer_sample, c("ID", "diagnosis", "area_mean", "area_worst", "smoothness_mean", "smoothness_worst", "compactness_mean", "compactness_worst" ))
+head(cancer_ms2)
+```
+
+The data is tidy, since:
+Each variable forms a column.
+Each observation forms a row.
+Each type of observational unit forms a table
 
 <!----------------------------------------------------------------------------->
 
@@ -74,6 +94,28 @@ If your data is untidy, then tidy it! Then, untidy it back to it's original stat
 Be sure to explain your reasoning for this task. Show us the "before" and "after".
 
 <!--------------------------- Start your work below --------------------------->
+To untidy the data, since all the values in this data are float or integer, and it mainly specify the characterisc of each sample of cancer.
+So the meaning of this untidy process is : we try to spread all the values of the area_worst value according to the diagnoisis of cancer.
+```{r}
+untidy_data <- cancer_ms2 %>%
+  pivot_wider(id_cols = c(ID, area_mean,smoothness_mean, smoothness_worst,
+compactness_mean, compactness_worst ), 
+              names_from = diagnosis, 
+              values_from = area_worst)
+head(untidy_data)
+```
+Now, we need to tidy the untidy_data back. After tidy the data, it has been changed back.
+```{r}
+tidy_data <- untidy_data %>%
+  pivot_longer(cols = c(-ID, -area_mean, -smoothness_mean, -smoothness_worst,
+-compactness_mean, -compactness_worst),
+   names_to = "diagnosis", 
+   values_to = "area_worst"
+)
+
+head(tidy_data)
+```
+
 
 <!----------------------------------------------------------------------------->
 
@@ -83,20 +125,35 @@ Now, you should be more familiar with your data, and also have made progress in 
 
 <!-------------------------- Start your work below ---------------------------->
 
-1.  *FILL_THIS_IN*
-2.  *FILL_THIS_IN*
+1.  Is there any relationship between diagnosis of the cancer with area_worst?
+
+
+2.  Is there any relationship between area_worst with compactness_worst?
 
 <!----------------------------------------------------------------------------->
 
 Explain your decision for choosing the above two research questions.
 
 <!--------------------------- Start your work below --------------------------->
+Based on the milestone1 investigation of the data, I have found there might exist some relationship between the 
+diagnosis and area_worst, so I would like to use the model to check it. As for the compactness_worst with diagonsis, based on my understanding, 
+there should be relationship, but I need to do more research to find out.
 
 <!----------------------------------------------------------------------------->
 
 Now, try to choose a version of your data that you think will be appropriate to answer these 2 questions. Use between 4 and 8 functions that we've covered so far (i.e. by filtering, cleaning, tidy'ing, dropping irrelevant columns, etc.).
 
 <!--------------------------- Start your work below --------------------------->
+So the data I will use in the futher for doing my research, I will store it in "cancer"
+```{r}
+cancer <- select(cancer_ms2, ID, diagnosis, area_worst, compactness_worst) %>%
+filter(area_worst > 0)%>%
+arrange(area_worst)
+na.omit(cancer)
+
+
+```
+
 
 <!----------------------------------------------------------------------------->
 
@@ -107,6 +164,14 @@ For this exercise, you'll be choosing two of the three tasks below -- both tasks
 But first, tasks 1 and 2 below ask you to modify a plot you made in a previous milestone. The plot you choose should involve plotting across at least three groups (whether by facetting, or using an aesthetic like colour). Place this plot below (you're allowed to modify the plot if you'd like). If you don't have such a plot, you'll need to make one. Place the code for your plot below.
 
 <!-------------------------- Start your work below ---------------------------->
+```{r}
+ggplot(cancer, aes(diagnosis, area_worst)) + 
+    geom_boxplot(width = 0.2)
+ggplot(cancer, aes(x = area_worst)) + 
+    geom_density(aes(color = diagnosis))
+
+```
+
 
 <!----------------------------------------------------------------------------->
 
@@ -129,13 +194,26 @@ Now, choose two of the following tasks.
 
 <!-------------------------- Start your work below ---------------------------->
 
-**Task Number**: FILL_THIS_IN
+**Task 1**:
 
 <!----------------------------------------------------------------------------->
+I used fct_recode function in "forcats" package, since B and M are not intuitive for people who first check this research, I change the name.
+However, I really can not find varibles that could be reordered.
+```{r}
+cancer <- cancer %>%
+mutate(diagnosis = fct_recode(diagnosis, "Maligant" = "M",
+                               "Benign" = "B"))
+ggplot(cancer, aes(diagnosis, area_worst)) + 
+    geom_boxplot(width = 0.2)
+```
+
 
 <!-------------------------- Start your work below ---------------------------->
 
-**Task Number**: FILL_THIS_IN
+**Task 2**: 
+```{r}
+
+```
 
 <!----------------------------------------------------------------------------->
 
@@ -147,10 +225,9 @@ Pick a research question, and pick a variable of interest (we'll call it "Y") th
 
 <!-------------------------- Start your work below ---------------------------->
 
-**Research Question**: FILL_THIS_IN
+**Research Question**: Is there any relationship between area_worst with compactness_worst?
 
-**Variable of interest**: FILL_THIS_IN
-
+**Variable of interest**: Y(area_worst), and X(compactness_worst)
 <!----------------------------------------------------------------------------->
 
 ## 2.1 (5 points)
@@ -164,6 +241,13 @@ Fit a model or run a hypothesis test that provides insight on this variable with
     -   You could use `lm()` to test for significance of regression.
 
 <!-------------------------- Start your work below ---------------------------->
+```{r}
+model <-  lm(area_worst~ compactness_worst, cancer)
+print(model)
+unclass(model)
+```
+
+model <-  lm(area_worst~)
 
 <!----------------------------------------------------------------------------->
 
@@ -176,6 +260,16 @@ Produce something relevant from your fitted model: either predictions on Y, or a
 -   Obtain your results using the `broom` package if possible. If your model is not compatible with the broom function you're needing, then you can obtain your results by some other means, but first indicate which broom function is not compatible.
 
 <!-------------------------- Start your work below ---------------------------->
+Predictions on Y
+Given the compactness_worst and predict the area_worst value: eg: we set the compactness_worst =1, the area_worst should be 2063.373
+```{r}
+newdata<-data.frame(compactness_worst = 1)
+predict(model, newdata)
+
+#Using broom package 
+(tidyed_lm <- broom::tidy(model))
+```
+
 
 <!----------------------------------------------------------------------------->
 
@@ -192,6 +286,35 @@ Take a summary table that you made from Milestone 1 (Task 4.2), and write it as 
 
 <!-------------------------- Start your work below ---------------------------->
 
+```{r} 
+here::here()
+dir.create(here::here("output"))
+# the summary_table is from Milestone1 4.2
+mean_value <-cancer_sample %>%
+  group_by(diagnosis) %>%
+  summarise(area_worst_mean = mean(area_worst, na.rm = TRUE))
+
+### median of area_worst in each group of diagnosis ###
+median_value <- cancer_sample %>%
+  group_by(diagnosis) %>%
+  summarise(area_worst_median = median(area_worst, na.rm = TRUE))
+
+### sum of area_worst in each group of diagnosis ###
+sum_value <- cancer_sample %>%
+  group_by(diagnosis) %>%
+  summarise(area_worst_sum = sum(area_worst, na.rm = TRUE))
+
+temp <- merge(mean_value, median_value, by = "diagnosis")
+summary_table <- merge(temp, sum_value, by = "diagnosis")
+Task4.2 <- summary_table
+
+write_csv(Task4.2, here::here("output", "Task4.2.cvs"))
+
+```
+
+
+
+
 <!----------------------------------------------------------------------------->
 
 ## 3.2 (5 points)
@@ -201,6 +324,10 @@ Write your model object from Task 3 to an R binary file (an RDS), and load it ag
 -   The same robustness and reproducibility criteria as in 3.1 apply here.
 
 <!-------------------------- Start your work below ---------------------------->
+```{r}
+saveRDS(model, here::here("output", "model.rds"))
+readRDS(here::here("output","model.rds"))
+```
 
 <!----------------------------------------------------------------------------->
 
